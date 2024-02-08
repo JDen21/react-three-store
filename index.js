@@ -61,7 +61,7 @@ export default function ThreeStoreProvider ({
    */
   function store (storable, options) {
     options = options ?? {};
-    if (!skipUrl && !options.skipUrl) {
+    if (!skipUrl && !options.skipUrl && window) {
       const url = new URL(window.location.href);
       url.searchParams.set(storable[0], storable[1]);
       history.pushState({}, '', url);
@@ -77,17 +77,22 @@ export default function ThreeStoreProvider ({
 
   function getStored (key) {
     // * priority: url, state, localstore
-    const url = new URL(window.location.href);
-    const urlValue = url.searchParams.get(key);
+    if (window) {
+      const url = new URL(window.location.href);
+      const urlValue = url.searchParams.get(key);
+      return urlValue;
+    }
     const stateValue = storage[key];
     const localStoreValue = localStorage.getItem(key);
-    return urlValue || stateValue || localStoreValue || null;
+    return stateValue || localStoreValue || null;
   }
 
   function clearStored (key) {
-    const url = new URL(window.location.href);
-    url.searchParams.delete(key);
-    history.pushState({}, '', url);
+    if (window) {
+      const url = new URL(window.location.href);
+      url.searchParams.delete(key);
+      history.pushState({}, '', url);
+    }
     setStorage(storage => {
       const newStorage = { ...storage };
       delete newStorage[key];
