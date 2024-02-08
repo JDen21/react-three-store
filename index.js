@@ -41,16 +41,20 @@ export default function ThreeStoreProvider ({
   useEffect(() => {
     return () => {
       const cleanupKeys = Object.keys(storage);
-      const url = new URL(window.location.href);
+      if (typeof window !== undefined) {
+        const url = new URL(window.location.href);
+        cleanupKeys.forEach(key => {
+          url.searchParams.delete(key);
+        });
+        if (clearUrlParamsOnUnmount) {
+          history.pushState({}, '', url);
+        }  
+      }
       cleanupKeys.forEach(key => {
-        url.searchParams.delete(key);
         if (clearLocalStoreOnUnmount) {
           localStorage.delete(key);
         }
       });
-      if (clearUrlParamsOnUnmount) {
-        history.pushState({}, '', url);
-      }
     }
   }, []);
 
@@ -61,7 +65,7 @@ export default function ThreeStoreProvider ({
    */
   function store (storable, options) {
     options = options ?? {};
-    if (!skipUrl && !options.skipUrl && window) {
+    if (!skipUrl && !options.skipUrl && typeof window !== undefined) {
       const url = new URL(window.location.href);
       url.searchParams.set(storable[0], storable[1]);
       history.pushState({}, '', url);
@@ -77,7 +81,7 @@ export default function ThreeStoreProvider ({
 
   function getStored (key) {
     // * priority: url, state, localstore
-    if (window) {
+    if (typeof window !== undefined) {
       const url = new URL(window.location.href);
       const urlValue = url.searchParams.get(key);
       return urlValue;
@@ -88,7 +92,7 @@ export default function ThreeStoreProvider ({
   }
 
   function clearStored (key) {
-    if (window) {
+    if (typeof window !== undefined) {
       const url = new URL(window.location.href);
       url.searchParams.delete(key);
       history.pushState({}, '', url);
