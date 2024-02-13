@@ -1,5 +1,5 @@
 'use client'
-import { createContext, useContext, useEffect, useRef, useState } from "react";
+import { createContext, useContext, useEffect, useRef, useState, useCallback } from "react";
 
 const ThreeStoreContext = createContext();
 
@@ -42,7 +42,7 @@ export default function ThreeStoreProvider ({
   useEffect(() => {
     return () => {
       const cleanupKeys = Object.keys(storage);
-      if (typeof window !== undefined) {
+      if (typeof window !== 'undefined') {
         const url = new URL(window.location.href);
         cleanupKeys.forEach(key => {
           url.searchParams.delete(key);
@@ -53,7 +53,7 @@ export default function ThreeStoreProvider ({
       }
       cleanupKeys.forEach(key => {
         if (clearLocalStoreOnUnmount) {
-          localStorage.delete(key);
+          window.localStorage.delete(key);
         }
       });
     }
@@ -64,47 +64,58 @@ export default function ThreeStoreProvider ({
    * @param {Array[String]} storable index 0  for key, index 1 for value
    * @param {Object}} options locally decide if skipUrl or skipLocalStore
    */
-  function store (storable, options) {
-    options = options ?? {};
-    if (!skipUrl && !options.skipUrl && typeof window !== undefined) {
-      const url = new URL(window.location.href);
-      url.searchParams.set(storable[0], storable[1]);
-      history.pushState({}, '', url);
-    }
-    if (!skipState && !options.skipState) {
-      setStorage(storage => 
-        ({...storage, [storable[0]]: storable[1]}));
-    }
-    if (!skipLocalStore && !options.skipLocalStore) {
-      localStorage.setItem(storable[0], storable[1]);
-    }
-  }
+  const store = useCallback(
+    function store (storable, options) {
+      options = options ?? {};
+      if (!skipUrl && !options.skipUrl && typeof window !== 'undefined') {
+        const url = new URL(window.location.href);
+        url.searchParams.set(storable[0], storable[1]);
+        history.pushState({}, '', url);
+      }
+      if (!skipState && !options.skipState) {
+        setStorage(storage => 
+          ({...storage, [storable[0]]: storable[1]}));
+      }
+      if (!skipLocalStore && !options.skipLocalStore) {
+        window.localStorage.setItem(storable[0], storable[1]);
+      }
+    }, []
+  );
 
-  function getStored (key) {
-    // * priority: url, state, localstore
-    if (typeof window !== undefined) {
-      const url = new URL(window.location.href);
-      const urlValue = url.searchParams.get(key);
-      return urlValue;
-    }
-    const stateValue = storage[key];
-    const localStoreValue = localStorage.getItem(key);
-    return stateValue || localStoreValue || null;
-  }
+  const getStored = useCallback(
+    function (key) {
+      // * priority: url, state, localstore
+      if (typeof window !== 'undefined') {
+        const url = new URL(window.location.href);
+        const urlValue = url.searchParams.get(key);
+        return urlValue;
+      }
+      const stateValue = storage[key];
+      let localStoreValue;
+      if (typeof window !== 'undefined') {
+        localStoreValue = window.localStorage.getItem(key);
+      }
+      return stateValue || localStoreValue || null;
+    }, []  
+  );
+  const clearStored = useCallback(
+    function (key) {
+      if (typeof window !== 'undefined') {
+        const url = new URL(window.location.href);
+        url.searchParams.delete(key);
+        history.pushState({}, '', url);
+      }
+      setStorage(storage => {
+        const newStorage = { ...storage };
+        delete newStorage[key];
+        return newStorage;
+      });
 
-  function clearStored (key) {
-    if (typeof window !== undefined) {
-      const url = new URL(window.location.href);
-      url.searchParams.delete(key);
-      history.pushState({}, '', url);
-    }
-    setStorage(storage => {
-      const newStorage = { ...storage };
-      delete newStorage[key];
-      return newStorage;
-    });
-    localStorage.removeItem(key);
-  }
+      if (typeof window !== 'undefined') {
+        window.localStorage.removeItem(key);
+      }
+    }, []
+  )
 
   return (
     <ThreeStoreContext.Provider
