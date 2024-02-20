@@ -85,17 +85,17 @@ export default function ThreeStoreProvider ({
   const getStored = useCallback(
     function (key) {
       // * priority: url, state, localstore
+      let urlValue
       if (typeof window !== 'undefined') {
         const url = new URL(window.location.href);
-        const urlValue = url.searchParams.get(key);
-        return urlValue;
+        urlValue = url.searchParams.get(key);
       }
       const stateValue = storage[key];
       let localStoreValue;
       if (typeof window !== 'undefined') {
         localStoreValue = window.localStorage.getItem(key);
       }
-      return stateValue || localStoreValue || null;
+      return urlValue || stateValue || localStoreValue || null;
     }, []  
   );
   const clearStored = useCallback(
