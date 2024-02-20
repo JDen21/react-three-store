@@ -42,15 +42,13 @@ export default function ThreeStoreProvider ({
   useEffect(() => {
     return () => {
       const cleanupKeys = Object.keys(storage);
-      if (typeof window !== 'undefined') {
         const url = new URL(window.location.href);
         cleanupKeys.forEach(key => {
           url.searchParams.delete(key);
         });
         if (clearUrlParamsOnUnmount) {
           history.pushState({}, '', url);
-        }  
-      }
+        }
       cleanupKeys.forEach(key => {
         if (clearLocalStoreOnUnmount) {
           window.localStorage.delete(key);
@@ -64,10 +62,9 @@ export default function ThreeStoreProvider ({
    * @param {Array[String]} storable index 0  for key, index 1 for value
    * @param {Object}} options locally decide if skipUrl or skipLocalStore
    */
-  const store = useCallback(
-    function store (storable, options) {
+  const store = function store (storable, options) {
       options = options ?? {};
-      if (!skipUrl && !options.skipUrl && typeof window !== 'undefined') {
+      if (!skipUrl && !options.skipUrl) {
         const url = new URL(window.location.href);
         url.searchParams.set(storable[0], storable[1]);
         history.pushState({}, '', url);
@@ -79,43 +76,29 @@ export default function ThreeStoreProvider ({
       if (!skipLocalStore && !options.skipLocalStore) {
         window.localStorage.setItem(storable[0], storable[1]);
       }
-    }, []
-  );
+    };
 
-  const getStored = useCallback(
-    function (key) {
+  const getStored = function (key) {
       // * priority: url, state, localstore
-      let urlValue
-      if (typeof window !== 'undefined') {
-        const url = new URL(window.location.href);
-        urlValue = url.searchParams.get(key);
-      }
+      const url = new URL(window.location.href);
+      const urlValue = url.searchParams.get(key);
       const stateValue = storage[key];
-      let localStoreValue;
-      if (typeof window !== 'undefined') {
-        localStoreValue = window.localStorage.getItem(key);
-      }
+      const localStoreValue = window.localStorage.getItem(key);
+      console.log({ urlValue, stateValue, localStoreValue })
       return urlValue || stateValue || localStoreValue || null;
-    }, []  
-  );
-  const clearStored = useCallback(
-    function (key) {
-      if (typeof window !== 'undefined') {
+    };
+  const clearStored = function (key) {
         const url = new URL(window.location.href);
         url.searchParams.delete(key);
         history.pushState({}, '', url);
-      }
+
       setStorage(storage => {
         const newStorage = { ...storage };
         delete newStorage[key];
         return newStorage;
       });
-
-      if (typeof window !== 'undefined') {
-        window.localStorage.removeItem(key);
-      }
-    }, []
-  )
+      window.localStorage.removeItem(key);
+    }
 
   return (
     <ThreeStoreContext.Provider
